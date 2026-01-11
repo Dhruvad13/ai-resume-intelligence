@@ -1,9 +1,12 @@
 import { useState } from "react";
+import ProgressChart from "./ProgressChart";
 
 export default function App() {
   const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
   const [role, setRole] = useState("backend");
+  const [answer, setAnswer] = useState("");
+  const [evaluation, setEvaluation] = useState(null);
 
   const uploadResume = async () => {
     if (!file) return alert("Upload resume");
@@ -19,6 +22,17 @@ export default function App() {
 
     const data = await res.json();
     setResult(data);
+  };
+
+  const submitAnswer = async (question) => {
+    const res = await fetch("http://127.0.0.1:8000/evaluate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answer, question })
+    });
+
+    const data = await res.json();
+    setEvaluation(data);
   };
 
   return (
@@ -59,27 +73,57 @@ export default function App() {
             </p>
 
             <p>Matching Score: <b>{result.score}%</b></p>
-
             <p><b>Skills Found:</b> {result.skills_found.join(", ")}</p>
             <p><b>Missing Skills:</b> {result.missing_skills.join(", ")}</p>
 
             <div>
               <p className="font-medium">Interview Questions</p>
               <ul className="list-disc pl-5">
-                {result.interview_questions.map((q,i) => (
+                {result.interview_questions.map((q, i) => (
                   <li key={i}>{q}</li>
                 ))}
               </ul>
             </div>
 
+            <textarea
+              className="w-full border p-2 rounded"
+              placeholder="Type your answer here..."
+              onChange={e => setAnswer(e.target.value)}
+            />
+
+            <button
+              onClick={() => submitAnswer(result.interview_questions[0])}
+              className="w-full bg-indigo-500 text-white py-2 rounded-xl hover:bg-indigo-600 transition"
+            >
+              Evaluate Answer
+            </button>
+
+            {evaluation && (
+              <div className="mt-3">
+                <p className="font-medium">Score: {evaluation.score} / 100</p>
+                <p className="font-medium">AI Feedback:</p>
+                <ul className="list-disc pl-5">
+                  {(Array.isArray(evaluation.feedback)
+                    ? evaluation.feedback
+                    : [evaluation.feedback]
+                  ).map((f, i) => (
+                    <li key={i}>{f}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div>
               <p className="font-medium">Resume Improvement Tips</p>
               <ul className="list-disc pl-5">
-                {result.resume_suggestions.map((s,i) => (
+                {result.resume_suggestions.map((s, i) => (
                   <li key={i}>{s}</li>
                 ))}
               </ul>
             </div>
+
+            {/* Progress Chart */}
+            <ProgressChart />
           </div>
         )}
       </div>
